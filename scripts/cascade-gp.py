@@ -9,7 +9,7 @@ import joblib
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import DotProduct, WhiteKernel, RBF
 import pandas as pd
-
+import seaborn as sns
 
 class Train():
 
@@ -47,20 +47,6 @@ class Train():
             mean_y_pred_r, std_y_pred_r = gpr.predict(x_test[j].reshape(1, -1), return_std=True)
 
             delta = x_test[j + 1] - x_test[j]
-            # sol_meanDict = {'delta_u': delta[0],
-            #                 'delta_v': delta[1],
-            #                 'delta_r': delta[2],
-            #                 'u_hat': mean_y_pred[0],
-            #                 'v_hat': mean_y_pred_v[0],
-            #                 'r_hat': mean_y_pred_r[0],
-            #
-            #                 'error_u': delta[0] - mean_y_pred[0],
-            #                 'error_v': delta[1] - mean_y_pred_v[0],
-            #                 'error_r': delta[2] - mean_y_pred_r[0],
-            #                 'std_u': std_y_pred[0],
-            #                 'std_v': std_y_pred_v[0],
-            #                 'std_r': std_y_pred_r[0]
-            #                 }
             sol_meanDict = {'delta_n': delta[0],
                             'delta_e': delta[1],
                             'delta_psi': delta[2],
@@ -186,55 +172,50 @@ if __name__ == '__main__':
 
     input_d = feature_in * [1, 1, np.pi / 180, knottoms, knottoms, np.pi / 180, 1, 1 / 100 * 203, 1, 1 / 100 * 203, 1, knottoms]
 
-    plt.figure(4)
-    plt.subplot(1, 1, 1)
-    plt.plot(feature_in[:, 0], feature_in[:, 1])
+    sol_m = pd.read_csv('../error_m_ne.csv').values
+    input_m = sol_m[:, 13:16]
 
-    # plt.subplot(5, 1, 3)
-    # plt.plot(feature_in[:, 2])
-    #
-    # plt.subplot(5, 1, 4)
-    # plt.plot(feature_in[:, 3], label='azi pt')
-    # plt.plot(feature_in[:, 5], label='azi sb')
-    # plt.legend()
-    # plt.subplot(5, 1, 5)
-    # plt.plot(feature_in[:, 4], label='rpm pt')
-    # plt.plot(feature_in[:, 6], label='rpm sb')
-    # plt.legend()
+    hybrid_input = np.hstack([input_d[:-1, :], input_m])
 
     onput_d = input_d[1:500, 0] - input_d[:499, 0]
     onput_dv = input_d[1:500, 1] - input_d[:499, 1]
     onput_dr = input_d[1:500, 2] - input_d[:499, 2]
 
-    loc = [570, 800] # 20/20, 60%
+    loc = [570, 800]  # 20/20, 60%
     # loc = [850, 1000] # 30/30, 60%
     # loc = [1791,1951]
     # loc = [0, 499]
-    x_test = input_d[loc[0]:loc[1], :]
-    x_train = input_d[:499, :]
-    # mean = gppre.pre(x_train, onput_d, onput_dv, onput_dr, x_test, True, 'err_gp_xy_test')
+    x_test = hybrid_input[loc[0]:loc[1], :]
+    x_train = hybrid_input[:499, :]
 
-    sol_m = pd.read_csv('../error_m_ne.csv').values
+    # fig = plt.figure()
+    # sns.pairplot(pd.DataFrame(x_train))
 
-    mean = pd.read_csv('../err_gp_xy_test.csv')
+    mean = gppre.pre(x_train, onput_d, onput_dv, onput_dr, x_test, True, 'err_hybrid_gp_ne_test')
+
+    # sol_m = pd.read_csv('../error_m.csv').values
+
+    # mean = pd.read_csv('../err_gp_10.csv')
 
     fig1 = plt.figure(1)
-    plt.plot(range(len(x_test)-1), x_test[1:, 0], color="black", linestyle="dashed",
+    plt.plot(range(len(x_test) - 1), x_test[1:, 0], color="black", linestyle="dashed",
              label="Measurements")
-    plt.plot(range(len(x_test)-1), x_test[:-1, 0] + mean['n_hat'], color="tab:blue", alpha=0.4, label="Gaussian process")
+    plt.plot(range(len(x_test) - 1), x_test[:-1, 0] + mean['n_hat'], color="tab:blue", alpha=0.4,
+             label="Gaussian process")
     plt.fill_between(
-        range(len(x_test)-1),
+        range(len(x_test) - 1),
         x_test[:-1, 0] + mean['n_hat'] - mean['std_n'],
         x_test[:-1, 0] + mean['n_hat'] + mean['std_n'],
         color="tab:blue",
         alpha=0.2,
     )
-    plt.plot(range(len(x_test)-1), x_test[:-1, 0] + sol_m[loc[0]:loc[1]-1, 13],  color="tab:red", alpha=0.4, label="Model projections")
+    plt.plot(range(len(x_test) - 1), x_test[:-1, 0] + sol_m[loc[0]:loc[1] - 1, 13], color="tab:red", alpha=0.4,
+             label="Model projections")
     plt.legend()
     plt.xlabel("time [s]")
     plt.ylabel("n")
 
-    fig1.savefig('../figures/gpm-n-test.png',
+    fig1.savefig('../figures/hbgpm-n-test20.png',
                 bbox_inches='tight', dpi=800)
 
     fig2 = plt.figure(2)
@@ -255,7 +236,7 @@ if __name__ == '__main__':
     plt.xlabel("time [s]")
     plt.ylabel("e")
 
-    fig2.savefig('../figures/gpm-e-test.png',
+    fig2.savefig('../figures/hbgpm-e-test20.png.png',
                 bbox_inches='tight', dpi=800)
 
     fig3 = plt.figure(3)
@@ -278,7 +259,7 @@ if __name__ == '__main__':
     plt.xlabel("time [s]")
     plt.ylabel("psi")
 
-    fig3.savefig('../figures/gpm-psi-test.png',
+    fig3.savefig('../figures/hbgpm-psi-test20.png',
                 bbox_inches='tight', dpi=800)
 
     plt.figure(5)

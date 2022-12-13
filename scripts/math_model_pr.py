@@ -74,6 +74,18 @@ class ModelPredict:
 
         self.fmu, self.vrs = fmu, vrs
 
+        self.wp = 0.26
+        self.t_p = 0.25
+        self.Dp = 2.0
+
+        self.x_rud = -14.45  # [m] distance to rudder(long)
+
+        self.x_prop = -13.5
+        self.Area_rud = 2.42
+        self.Dp = 2.0
+        self.wp = 0.26
+        self.dens = 1025.0
+
         wind_ang = np.arange(0, 181, 10) / 180 * np.pi
 
         # x direction
@@ -253,6 +265,80 @@ class ModelPredict:
 
         return tauw
 
+    def get_propulsion_pt(self, rpm, u):
+        if rpm == 0:
+            fx = 0
+            fy = 0
+            fn = 0
+            Faz = np.array([fx, fy, fn]).reshape(-1, 1)
+        else:
+            if abs(rpm) > 203:
+                rpm = 203
+
+            J = u * (1 - self.wp) / (rpm / 60) / self.Dp
+
+            Kt = -0.3362 * J ** 3 + 0.3983 * J ** 2 - 0.7193 * J + 0.7716
+
+            fx = (1 - self.t_p) * 1025 * (rpm / 60) ** 2 * self.Dp ** 4 * Kt
+            fy = 0
+            fn = 0
+
+            Faz = np.array([fx[0], fy, fn]).reshape(-1, 1)
+        return Faz
+
+    def get_rudder(self, rpm, delta, u, v, r, side):
+        if side == 'P':
+            y_rud = -2.7
+        elif side == 'S':
+            y_rud = 2.7
+
+        if abs(u) < 0.1:
+            fx = 0
+            fy = 0
+            fn = 0
+        else:
+
+            # Correction due to distance between rudder and propeller
+            K_R = 0.5 + 0.5 / (1 + 0.15 / (abs(self.x_rud - self.x_prop) / self.Dp))  # long.inflow velocity to
+            # propeller
+            U_prop_inf = (u - r * y_rud) * (1 - self.wp)  # long.inflow velocity to rudder
+
+            if rpm == 0:
+                U_rud_inf = U_prop_inf
+            else:
+                J = U_prop_inf / (rpm / 60) / self.Dp
+                K_t = -0.3362 * J ** 3 + 0.3983 * J ** 2 - 0.7193 * J + 0.7716
+
+                if (1 + 8 * K_t / np.pi / J / J) < 0.0:
+                    U_rud_inf = 0.001
+                else:
+                    U_rud_inf = - U_prop_inf * (
+                            1 + K_R * ((1 + 8 * K_t / 3.14 / J / J) ** 0.5 - 1))
+
+            # perpendicular inflow velocity to rudder
+            V_rud_inf = - (v + r * self.x_rud)
+
+            gamma = np.arctan(V_rud_inf / U_rud_inf)
+            alfa_eff = delta / 180 * np.pi - gamma
+            U_rud = (U_rud_inf ** 2 + V_rud_inf ** 2) ** 0.5
+
+            q = 0.5 * self.dens * U_rud ** 2
+
+            inflow_ang_grid = [0, 0.09, 0.17, 0.26, 0.35, 0.44, 0.52, 0.61, 0.7, 0.79, 1.2]
+            C_l_grid = [0, 0.6, 1.27, 1.75, 2.1, 2.2, 2.3, 2.2, 1.65, 1.5, 1]
+            C_d_grid = [0.08, 0.17, 0.4, 0.7, 1.05, 1.27, 1.7, 1.9, 2, 2, 2]
+
+            C_l = np.sign(alfa_eff) * np.interp(abs(alfa_eff), inflow_ang_grid, C_l_grid)
+            C_d = np.interp(abs(alfa_eff), inflow_ang_grid, C_d_grid)
+            L = C_l * q * self.Area_rud
+            D = C_d * q * self.Area_rud
+            fx = L * np.sin(gamma) - D * np.cos(gamma)
+            fy = L * np.cos(gamma) + D * np.sin(gamma)
+            fn = fy * self.x_rud - fx * y_rud
+
+        Faz = np.array([fx[0], fy[0], fn[0]]).reshape(-1, 1)
+        return Faz
+
     def get_one_side_f(self, ps, time, step_size, x0, rudder_cmd, rpm_cmd):
         if ps == 'P':
             ly = -2.7
@@ -290,13 +376,7 @@ class ModelPredict:
         # fn = - fy * 15.52 - fy * 15.52
         fn = - fy * 15.52 - fx * ly
         val_outputs['output_torque_calculation'] = fn
-
-        if abs(rpm_cmd) < 8:
-            fx, fy, fn = 0, 0, 0
-        if abs(x0[3]) < 0.2:
-            fx, fy, fn = 0, 0, 0
         Faz = np.array([fx, fy, fn]).reshape(-1, 1)
-
         return Faz
 
     def simulate(self):
@@ -316,10 +396,17 @@ class ModelPredict:
         x0 = ini_s
         time = 0
         while time < self.delta_t:
-            F_pt = self.get_one_side_f('P', time, 1., x0, rudder_cmd=self.rudder_cd_pt,
-                                       rpm_cmd=self.rpm_cd_pt)
-            F_sb = self.get_one_side_f('S', time, 1., x0, rudder_cmd=self.rudder_cd_sb,
-                                       rpm_cmd=self.rpm_cd_sb)
+            # F_pt = self.get_one_side_f('P', time, 1., x0, rudder_cmd=self.rudder_cd_pt,
+            #                            rpm_cmd=self.rpm_cd_pt)
+            # F_sb = self.get_one_side_f('S', time, 1., x0, rudder_cmd=self.rudder_cd_sb,
+            #                            rpm_cmd=self.rpm_cd_sb)
+
+            F_pt = self.get_propulsion_pt(self.rpm_cd_pt, x0[3]) + self.get_rudder(self.rpm_cd_pt, self.rudder_cd_pt,
+                                                                                   x0[3], x0[4], x0[5], 'P')
+
+            F_sb = self.get_propulsion_pt(self.rpm_cd_sb, x0[3]) + self.get_rudder(self.rpm_cd_sb, self.rudder_cd_sb,
+                                                                                   x0[3], x0[4], x0[5], 'S')
+
             Fhs = self.hydrodynamic(x0[3], x0[4], x0[5])
             Fw = self.get_wind_force(x0[2], x0[3], x0[4], x0[5])
             Fto = Fhs + F_pt + F_sb + Fw
