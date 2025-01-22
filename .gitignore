@@ -7,8 +7,13 @@ __pycache__/
 *.so
 
 .idea/
-.figures/
-.00 Non-elongated Gunnerus Docking Data/
+figures/
+00 Non-elongated Gunnerus Docking Data/
+MLmodels/
+*.csv
+*.fmu
+*.pkl
+scripts/tmp/
 
 # Distribution / packaging
 .Python

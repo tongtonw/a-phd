@@ -18,29 +18,56 @@ X_3 = data_gp[:, 10].reshape(-1, 1)
 Y_true = data_m[:498, 10].reshape(-1, 1)
 X = np.hstack([X_1, X_2, X_3])
 
+data_z = pd.read_csv('../zigzag_data.csv').values
+n, e = data_z[:498, 10], data_z[:498, 11]
+
 dw = pd.read_csv('../weighted_train.csv').values
 w = dw[:, 1]
 yw = dw[:, 2].reshape(-1, 1)
+stdyw = dw[:, 3].reshape(-1, 1)
 
-x1 = 0
+x1 = n[0]
 x = []
+x_m0 = n[0]
+x_m = []
+x_d0 = n[0]
+x_d = []
+
 for j in range(len(w)):
-    x1 += yw[j, 0]
     x.append(x1)
+    x1 = n[j]+yw[j, 0]
 
-def num2color(values, cmap):
-    """将数值映射为颜色"""
-    norm = mpl.colors.Normalize(vmin=np.min(values), vmax=np.max(values))
-    cmap = mpl.cm.get_cmap(cmap)
-    return [cmap(norm(val)) for val in values]
+    x_m.append(x_m0)
+    x_m0 = n[j] + X_1[j, 0]
 
-colors = num2color(w, "RdBu")
+    x_d.append(x_d0)
+    x_d0 = n[j] + X_2[j, 0]
+
+# Plot the three trajectories -----------------------------------------------------------------------------------
+# x = np.array(x)
+# x_m = np.array(x_m)
+# x_d = np.array(x_d)
 
 plt.figure()
-plt.scatter(np.arange(len(x)), x, c=w, cmap="Blues")
-plt.colorbar()
+plt.plot(n[:51], label='true measurements')
+plt.plot(x_m[:51], label='physics predictions')
+plt.plot(x_d[:51], label='data predictions')
+plt.plot(x[:51], label='weight predictions')
+plt.legend()
 plt.show()
+# Predict on train dataset-----------------------------------------------------------------------------------
+# cmap = mpl.cm.hot
+#
+# plt.figure()
+# plt.scatter(np.arange(len(x)), x, s=0.5, c=w, cmap=cmap)
+# a = np.array(x).reshape(-1, 1)
+# y1 = a-stdyw
+# y2 = a+stdyw
+# plt.fill_between(np.arange(len(x)), y1.flatten(), y2.flatten(), alpha=.5, linewidth=0)
+# plt.colorbar()
+# plt.show()
 
+""" 
 model = load_model('my_model.h5')
 Y = np.hstack([Y_true, X])
 
@@ -103,3 +130,4 @@ plt.boxplot([testm_e.flatten(), testd_e.flatten(), testw_e.flatten()], labels=['
             showmeans=True)
 
 plt.show()
+"""

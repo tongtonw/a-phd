@@ -87,92 +87,92 @@ class Train():
 
         return mean
 
-    def pre_mul(self, X, yu, yv, yr, horizon, x_test):
-        gpu = self.train(X, yu)
-
-        gpv = self.train(X, yv)
-        gpr = self.train(X, yr)
-
-        # horizon = 20
-        step_for = 1
-
-        sol_mean = []
-        sol_std = []
-
-        while step_for <= horizon:
-            mean_y_pred, std_y_pred = gpu.predict(x_test, return_std=True)
-            mean_y_pred_v, std_y_pred_v = gpv.predict(x_test, return_std=True)
-            mean_y_pred_r, std_y_pred_r = gpr.predict(x_test, return_std=True)
-
-            x_test[0, 0] = mean_y_pred + x_test[0, 0]
-
-            x_test[0, 1] = mean_y_pred_v + x_test[0, 1]
-            x_test[0, 2] = mean_y_pred_r + x_test[0, 2]
-
-            sol_meanDict = {'u': mean_y_pred[0], 'v': mean_y_pred_v[0], 'r': mean_y_pred_r[0]}
-            sol_stdDict = {'u': std_y_pred[0], 'v': std_y_pred_v[0], 'r': std_y_pred_r[0]}
-            sol_mean.append(sol_meanDict)
-            sol_std.append(sol_stdDict)
-            # sol_mean.append(mean_y_pred[0])
-            # sol_std.append(std_y_pred[0])
-            step_for += 1
-
-            mean = pd.DataFrame(sol_mean)
-            std = pd.DataFrame(sol_std)
-
-            xout = np.zeros([horizon, 3])
-            xout[0, 0] = x_test[0, 0]
-            xout[0, 1] = x_test[0, 1]
-            xout[0, 2] = x_test[0, 2]
-            for i in range(len(mean) - 1):
-                xout[i + 1, 0] = xout[i, 0] + mean.iloc[i, 0]
-                xout[i + 1, 1] = xout[i, 1] + mean.iloc[i, 1]
-                xout[i + 1, 2] = xout[i, 2] + mean.iloc[i, 2]
-
-            fig1 = plt.figure(1)
-            plt.plot(range(30), X[500:500 + 30, 0], color="black", linestyle="dashed",
-                     label="Measurements")
-            plt.plot(range(30), xout[:, 0], color="tab:blue", alpha=0.4, label="Gaussian process")
-            plt.fill_between(
-                range(30),
-                xout[:, 0] - std['u'],
-                xout[:, 0] + std['u'],
-                color="tab:blue",
-                alpha=0.2,
-            )
-            plt.legend()
-            plt.xlabel("index")
-            plt.ylabel("u")
-
-            fig2 = plt.figure(2)
-            plt.plot(range(30), X[500:500 + 30, 1], color="black", linestyle="dashed",
-                     label="Measurements")
-            plt.plot(range(30), xout[:, 1], color="tab:blue", alpha=0.4, label="Gaussian process")
-            plt.fill_between(
-                range(30),
-                xout[:, 1] - std['v'],
-                xout[:, 1] + std['v'],
-                color="tab:blue",
-                alpha=0.2,
-            )
-            plt.legend()
-            plt.xlabel("index")
-            plt.ylabel("v")
-
-            fig3 = plt.figure(3)
-            plt.plot(range(30), X[500:500 + 30, 2], color="black", linestyle="dashed",
-                     label="Measurements")
-            plt.plot(range(30), xout[:, 2], color="tab:blue", alpha=0.4, label="Gaussian process")
-            plt.fill_between(
-                range(30),
-                xout[:, 2] - std['r'],
-                xout[:, 2] + std['r'],
-                color="tab:blue",
-                alpha=0.2,
-            )
-            plt.legend()
-            plt.xlabel("index")
-            plt.ylabel("r")
+    # def pre_mul(self, X, yu, yv, yr, horizon, x_test):
+    #     gpu = self.train(X, yu)
+    #
+    #     gpv = self.train(X, yv)
+    #     gpr = self.train(X, yr)
+    #
+    #     # horizon = 20
+    #     step_for = 1
+    #
+    #     sol_mean = []
+    #     sol_std = []
+    #
+    #     while step_for <= horizon:
+    #         mean_y_pred, std_y_pred = gpu.predict(x_test, return_std=True)
+    #         mean_y_pred_v, std_y_pred_v = gpv.predict(x_test, return_std=True)
+    #         mean_y_pred_r, std_y_pred_r = gpr.predict(x_test, return_std=True)
+    #
+    #         x_test[0, 0] = mean_y_pred + x_test[0, 0]
+    #
+    #         x_test[0, 1] = mean_y_pred_v + x_test[0, 1]
+    #         x_test[0, 2] = mean_y_pred_r + x_test[0, 2]
+    #
+    #         sol_meanDict = {'u': mean_y_pred[0], 'v': mean_y_pred_v[0], 'r': mean_y_pred_r[0]}
+    #         sol_stdDict = {'u': std_y_pred[0], 'v': std_y_pred_v[0], 'r': std_y_pred_r[0]}
+    #         sol_mean.append(sol_meanDict)
+    #         sol_std.append(sol_stdDict)
+    #         # sol_mean.append(mean_y_pred[0])
+    #         # sol_std.append(std_y_pred[0])
+    #         step_for += 1
+    #
+    #         mean = pd.DataFrame(sol_mean)
+    #         std = pd.DataFrame(sol_std)
+    #
+    #         xout = np.zeros([horizon, 3])
+    #         xout[0, 0] = x_test[0, 0]
+    #         xout[0, 1] = x_test[0, 1]
+    #         xout[0, 2] = x_test[0, 2]
+    #         for i in range(len(mean) - 1):
+    #             xout[i + 1, 0] = xout[i, 0] + mean.iloc[i, 0]
+    #             xout[i + 1, 1] = xout[i, 1] + mean.iloc[i, 1]
+    #             xout[i + 1, 2] = xout[i, 2] + mean.iloc[i, 2]
+    #
+    #         fig1 = plt.figure(1)
+    #         plt.plot(range(30), X[500:500 + 30, 0], color="black", linestyle="dashed",
+    #                  label="Measurements")
+    #         plt.plot(range(30), xout[:, 0], color="tab:blue", alpha=0.4, label="Gaussian process")
+    #         plt.fill_between(
+    #             range(30),
+    #             xout[:, 0] - std['u'],
+    #             xout[:, 0] + std['u'],
+    #             color="tab:blue",
+    #             alpha=0.2,
+    #         )
+    #         plt.legend()
+    #         plt.xlabel("index")
+    #         plt.ylabel("u")
+    #
+    #         fig2 = plt.figure(2)
+    #         plt.plot(range(30), X[500:500 + 30, 1], color="black", linestyle="dashed",
+    #                  label="Measurements")
+    #         plt.plot(range(30), xout[:, 1], color="tab:blue", alpha=0.4, label="Gaussian process")
+    #         plt.fill_between(
+    #             range(30),
+    #             xout[:, 1] - std['v'],
+    #             xout[:, 1] + std['v'],
+    #             color="tab:blue",
+    #             alpha=0.2,
+    #         )
+    #         plt.legend()
+    #         plt.xlabel("index")
+    #         plt.ylabel("v")
+    #
+    #         fig3 = plt.figure(3)
+    #         plt.plot(range(30), X[500:500 + 30, 2], color="black", linestyle="dashed",
+    #                  label="Measurements")
+    #         plt.plot(range(30), xout[:, 2], color="tab:blue", alpha=0.4, label="Gaussian process")
+    #         plt.fill_between(
+    #             range(30),
+    #             xout[:, 2] - std['r'],
+    #             xout[:, 2] + std['r'],
+    #             color="tab:blue",
+    #             alpha=0.2,
+    #         )
+    #         plt.legend()
+    #         plt.xlabel("index")
+    #         plt.ylabel("r")
 
 
 if __name__ == '__main__':
