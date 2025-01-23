@@ -1,7 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-# from math_model import *
 from math_model import *
 import seaborn as sns
 
@@ -55,6 +54,18 @@ def error_gen(input_d, Outfile):
     nstep = len(input_d)
     while istep < nstep - 1:
         x0 = input_d[istep, :].reshape(1, -1)
+        """x0=ini0[0, 0],
+            y0=ini0[0, 1],
+            psi0=ini0[0, 2],
+            u0=ini0[0, 3],
+            v0=ini0[0, 4],
+            r0=ini0[0, 5],
+            rudder_cd_pt=ini0[0, 6],
+            rpm_cd_pt=ini0[0, 7],
+            rudder_cd_sb=ini0[0, 8],
+            rpm_cd_sb=ini0[0, 9],
+            global_wind_direction=ini0[0, 10],
+            global_wind_speed"""
         features = data_gen(fmu, vrs, x0)
         x1 = input_d[istep + 1, :].reshape(1, -1)
 

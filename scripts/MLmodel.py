@@ -11,7 +11,7 @@ from sklearn.gaussian_process.kernels import DotProduct, WhiteKernel, RBF
 import pandas as pd
 
 
-class Train():
+class GP():
 
     def model(self):
         kernel = 2.0 ** 2 * RBF(length_scale=100.0) + WhiteKernel()
@@ -29,7 +29,7 @@ class Train():
         # print(mlp.score(x_test, y_test))
         return gp
 
-    def pre(self, X, yu, yv, yr, x_test, save, file_name):
+    def gp_pre(self, X, yu, yv, yr, x_test, save, file_name):
         # test_size = 0.2
         # dof = ['u', 'v', 'r']
         # X, y = shuffle(input_d, onput_d, random_state=0)
@@ -80,13 +80,23 @@ class Train():
         mean = pd.DataFrame(sol_mean)
 
         if save:
-            # joblib.dump(gpu, '../gp_u.pkl')
-            # joblib.dump(gpv, '../gp_v.pkl')
-            # joblib.dump(gpr, '../gp_r.pkl')
+            joblib.dump(gpu, '../gp_u.pkl')
+            joblib.dump(gpv, '../gp_v.pkl')
+            joblib.dump(gpr, '../gp_r.pkl')
             mean.to_csv('../{}.csv'.format(file_name))
 
         return mean
 
+    def csv_reads(path, ncsv):
+        """read and concatenate docking scenarios"""
+        n_feature = 21
+        Data = np.array([]).reshape(0, n_feature)
+        for i in range(ncsv):
+            csv_name = 'Scenario{}.csv'.format(i)
+            df = pd.read_csv(path + csv_name, header=None)
+            Data = np.concatenate((Data, df[1000:2000].values), axis=0)
+        return Data
+        
     # def pre_mul(self, X, yu, yv, yr, horizon, x_test):
     #     gpu = self.train(X, yu)
     #

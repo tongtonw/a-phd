@@ -169,7 +169,7 @@ def model(n_path):
     x_test = input_d[:-1, :]
     err_m = error_gen(x_test, 'error_m_docking{}'.format(n_path))
     # err_m = pd.read_csv('../error_m_docking{}.csv'.format(n_path))
-
+                         
     e_n = err_m.iloc[:, 16]
     std_n = 0.1
 
